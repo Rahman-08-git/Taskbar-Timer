@@ -17,6 +17,27 @@ A lightweight Windows system tray application that combines a stopwatch, a Pomod
 
 ---
 
+## 📸 Screenshots
+
+### ⏱️ Stopwatch in Taskbar Tray
+![Stopwatch running in taskbar tray](1.png)
+
+> [!IMPORTANT]
+> **Keep the timer visible:** By default, Windows may hide new tray icons under the `^` overflow menu. To keep the timer visible at all times:
+> 1. Click the small arrow `^` in your taskbar tray.
+> 2. Click and drag the stopwatch icon directly onto your main taskbar tray.
+> 3. Now the timer is permanently visible and updates in real-time!
+
+### 🖱️ Context Menu (Right-Click)
+Right-click on the timer icon in the system tray to open the main menu. From here, you can start/pause the timer, access Pomodoro options, or exit the application.
+![Stopwatch tray context menu](2.png)
+
+### 🍅 Pomodoro Presets & Custom Timer
+Choose from preset Pomodoro durations (5, 10, 15, 25, 45, 60 minutes) or click "Custom..." to set your own countdown timer.
+![Pomodoro Options](3.png)
+
+---
+
 ## 🚀 How to Download & Run (For Users)
 
 The easiest way to use this app is to download the pre-compiled executable:
@@ -24,7 +45,8 @@ The easiest way to use this app is to download the pre-compiled executable:
 1. Go to the **Releases** section on the right side of this GitHub repository page.
 2. Download the latest version of `stopwatch_tray.exe`.
 3. Double-click the downloaded file to run it. No installation or Python setup is required!
-4. Find the stopwatch icon in your system tray (bottom-right corner next to the clock). If it's hidden, click the small arrow `^` to find it.
+4. Find the stopwatch icon in your system tray (bottom-right corner next to the clock). If it's hidden, drag it out of the `^` overflow menu as shown in the screenshots section above.
+
 
 ---
 
