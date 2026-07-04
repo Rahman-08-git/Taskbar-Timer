@@ -1,0 +1,13 @@
+# Compiled Python files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# PyInstaller / Build files
+build/
+dist/
+stopwatch_tray.exe
