@@ -2,6 +2,8 @@
 
 A lightweight Windows system tray application that combines a stopwatch, a Pomodoro timer, and a global keyboard hotkey. It lives entirely in your taskbar tray, updates dynamically, and sends native Windows toast notifications.
 
+⭐ **If you find this tool helpful, please star the repository to support the project!**
+
 ---
 
 ## ✨ Features
