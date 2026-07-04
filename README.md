@@ -30,10 +30,12 @@ A lightweight Windows system tray application that combines a stopwatch, a Pomod
 
 ### 🖱️ Context Menu (Right-Click)
 Right-click on the timer icon in the system tray to open the main menu. From here, you can start/pause the timer, access Pomodoro options, or exit the application.
+
 ![Stopwatch tray context menu](2.png)
 
 ### 🍅 Pomodoro Presets & Custom Timer
 Choose from preset Pomodoro durations (5, 10, 15, 25, 45, 60 minutes) or click "Custom..." to set your own countdown timer.
+
 ![Pomodoro Options](3.png)
 
 ---
