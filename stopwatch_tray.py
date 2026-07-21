@@ -5,6 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 import keyboard
 
 # --- State ---
+state_lock = threading.Lock()   # protects ALL mutable state below
 running = False
 start_time = 0
 elapsed = 0
@@ -16,7 +17,10 @@ pomo_active = False
 pomo_paused = False
 pomo_remaining = 0
 pomo_thread = None
-pomo_lock = threading.Lock()
+
+# Debounce for toggle()
+_last_toggle_time = 0
+_DEBOUNCE_INTERVAL = 0.3  # seconds
 
 # Use system font
 FONT_PATH = "C:\\Windows\\Fonts\\arial.ttf"
@@ -105,10 +109,16 @@ def update_time():
 def toggle():
     """Unified Start / Pause for both stopwatch and pomodoro."""
     global running, start_time, elapsed, update_thread
-    global pomo_paused
+    global pomo_paused, _last_toggle_time
 
-    # ── If a pomodoro is active or paused, handle that first ──
-    with pomo_lock:
+    with state_lock:
+        # ── Debounce: ignore rapid repeated calls ──
+        now = time.time()
+        if now - _last_toggle_time < _DEBOUNCE_INTERVAL:
+            return
+        _last_toggle_time = now
+
+        # ── If a pomodoro is active or paused, handle that first ──
         if pomo_active and not pomo_paused:
             # Pause the running pomodoro
             pomo_paused = True
@@ -126,24 +136,24 @@ def toggle():
             pomo_paused = False
             return
 
-    # ── Otherwise, handle the normal stopwatch ──
-    if not running:
-        running = True
-        start_time = time.time() - elapsed
-        update_thread = threading.Thread(target=update_time, daemon=True)
-        update_thread.start()
-    else:
-        running = False
-        elapsed = time.time() - start_time
-        # Show paused state on the icon
-        t = format_time(elapsed)
-        try:
-            icon.icon = create_icon_with_time(
-                t, bg=(180, 120, 0), fg=(255, 255, 255), paused=True
-            )
-            icon.title = f"Paused: {t} ({int(elapsed)}s)"
-        except Exception:
-            pass
+        # ── Otherwise, handle the normal stopwatch ──
+        if not running:
+            running = True
+            start_time = time.time() - elapsed
+            update_thread = threading.Thread(target=update_time, daemon=True)
+            update_thread.start()
+        else:
+            running = False
+            elapsed = time.time() - start_time
+            # Show paused state on the icon
+            t = format_time(elapsed)
+            try:
+                icon.icon = create_icon_with_time(
+                    t, bg=(180, 120, 0), fg=(255, 255, 255), paused=True
+                )
+                icon.title = f"Paused: {t} ({int(elapsed)}s)"
+            except Exception:
+                pass
 
 
 # ── Pomodoro ─────────────────────────────────────────────────
@@ -151,15 +161,25 @@ def toggle():
 def _pomo_tick():
     """Background thread that counts down the pomodoro timer."""
     global pomo_active, pomo_paused, pomo_remaining
-    end_time = time.time() + pomo_remaining
+
+    with state_lock:
+        end_time = time.time() + pomo_remaining
+    was_paused_prev = False
+
     while True:
-        with pomo_lock:
+        with state_lock:
             if not pomo_active:
                 return
             if pomo_paused:
-                # While paused, just sleep and keep waiting
-                pass
+                # Track that we are currently paused
+                was_paused_prev = True
             else:
+                # If we just transitioned from paused → running,
+                # recalculate end_time so no time is lost during the pause
+                if was_paused_prev:
+                    end_time = time.time() + pomo_remaining
+                    was_paused_prev = False
+
                 # Actively counting down
                 pomo_remaining = max(0, end_time - time.time())
                 t = format_time(pomo_remaining)
@@ -173,20 +193,10 @@ def _pomo_tick():
                 if pomo_remaining <= 0:
                     break
 
-        # If we just transitioned from paused→running, recalculate end_time
-        with pomo_lock:
-            was_paused = pomo_paused
-        if not was_paused:
-            # Continuously re-anchor end_time so pause doesn't eat time
-            pass
-        else:
-            # Paused: push end_time forward so no time is lost
-            end_time = time.time() + pomo_remaining
-
         time.sleep(1)
 
     # Timer done
-    with pomo_lock:
+    with state_lock:
         pomo_active = False
         pomo_paused = False
     _notify("Pomodoro Complete!", "Time's up! Take a break.")
@@ -203,18 +213,18 @@ def start_pomo(minutes):
     global pomo_active, pomo_paused, pomo_remaining, pomo_thread, running, elapsed
 
     # Stop the stopwatch if it's running and reset it
-    if running:
-        running = False
-    elapsed = 0
-
-    # Cancel any existing pomodoro
-    with pomo_lock:
+    with state_lock:
+        if running:
+            running = False
+        elapsed = 0
+        # Cancel any existing pomodoro
         pomo_active = False
         pomo_paused = False
+
     if pomo_thread and pomo_thread.is_alive():
         pomo_thread.join(timeout=2)
 
-    with pomo_lock:
+    with state_lock:
         pomo_active = True
         pomo_paused = False
         pomo_remaining = minutes * 60
@@ -226,7 +236,7 @@ def start_pomo(minutes):
 def cancel_pomo(icon_, item):
     """Cancel the running pomodoro."""
     global pomo_active, pomo_paused
-    with pomo_lock:
+    with state_lock:
         pomo_active = False
         pomo_paused = False
     try:
@@ -287,6 +297,13 @@ menu = pystray.Menu(
 
 icon = pystray.Icon("Stopwatch", create_icon_with_time("00:00"), "Stopwatch", menu)
 
-keyboard.add_hotkey("windows+alt+s", toggle)
+def _safe_toggle():
+    """Wrapper that prevents exceptions from killing the keyboard hook thread."""
+    try:
+        toggle()
+    except Exception:
+        pass
+
+keyboard.add_hotkey("windows+alt+s", _safe_toggle)
 
 icon.run()
